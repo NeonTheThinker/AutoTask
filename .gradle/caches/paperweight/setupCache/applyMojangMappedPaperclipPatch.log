@@ -1,0 +1,2 @@
+Command: C:\Users\Neon\.jdks\temurin-17.0.15\bin\java.exe -Dpaperclip.patchonly=true -classpath C:\Users\Neon\IdeaProjects\AutoTask\.gradle\caches\paperweight\setupCache\extractDevBundle.dir\data\paperclip-mojang+yarn.jar io.papermc.paperclip.Main
+Applying patches
