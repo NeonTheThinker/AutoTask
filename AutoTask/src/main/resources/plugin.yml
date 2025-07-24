@@ -1,0 +1,37 @@
+name: AutoTask
+version: '1.0'
+main: owleaf.AutoTasks
+api-version: 1.20
+author: NeonTheThinker
+website: discord.gg/owleafstudio
+commands:
+  at:
+    description: Ejecuta una tarea programada
+    permission: autotasks.use
+    permission-message: "§cNo tienes permiso para usar /at"
+  atstop:
+    description: Detiene una tarea
+    permission: autotasks.manage
+    permission-message: "§cNo tienes permiso para usar /atstop"
+  atstatus:
+    description: Muestra tareas activas
+    permission: autotasks.view
+    permission-message: "§cNo tienes permiso para usar /atstatus"
+  atreload:
+    description: Recarga las tareas
+    permission: autotasks.reload
+    permission-message: "§cNo tienes permiso para usar /atreload"
+
+permissions:
+  autotasks.use:
+    description: Permiso para /at
+    default: op
+  autotasks.manage:
+    description: Permiso para /atstop
+    default: op
+  autotasks.view:
+    description: Permiso para /atstatus
+    default: op
+  autotasks.reload:
+    description: Permiso para /atreload
+    default: op
