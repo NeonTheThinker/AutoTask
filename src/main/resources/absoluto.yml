@@ -1,0 +1,16 @@
+modo: absoluto
+utc: '0'
+acciones:
+- delay: '14:00:00'
+  comandos:
+  - say ¡La tarea comienza ahora!
+  - effect give @a speed 300 0
+- delay: '14:30:00'
+  comandos:
+  - say ¡Han pasado 30 minutos!
+  - weather clear
+- delay: '15:00:00'
+  comandos:
+  - say ¡Hora del evento especial!
+  - effect give @a jump_boost 120 1
+- stop: Tarea Absoluta Finalizada

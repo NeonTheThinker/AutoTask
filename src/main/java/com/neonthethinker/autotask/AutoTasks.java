@@ -1,42 +1,57 @@
-package owleaf;
+package com.neonthethinker.autotask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
-import owleaf.task.TaskManager;
+import com.neonthethinker.autotask.task.TaskManager;
 
 import java.io.File;
 
 public class AutoTasks extends JavaPlugin {
     private File autotasksFolder;
-    private CommandHandler commandHandler;
-    private FileConfiguration config;
+    private AutoTaskCommands commandHandler;
     private TaskManager taskManager;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        this.taskManager = new TaskManager(this);
+
+        if (!getDataFolder().exists()) {
+            getDataFolder().mkdirs();
+        }
 
         this.autotasksFolder = new File(getDataFolder(), "autotasks");
         if (!autotasksFolder.exists()) {
             autotasksFolder.mkdirs();
         }
 
-        this.commandHandler = new CommandHandler(taskManager);
+        saveDefaultTask("absoluto.yml");
+        saveDefaultTask("incremental.yml");
+        this.taskManager = new TaskManager(this);
+        this.commandHandler = new AutoTaskCommands(taskManager);
         registerCommands();
         taskManager.reloadTasks();
 
         Bukkit.getScheduler().runTaskLater(this, () -> {
-            new Test(this).createTestFile();
             taskManager.reloadTasks();
         }, 20L);
     }
 
+    private void saveDefaultTask(String resourceName) {
+        File taskFile = new File(autotasksFolder, resourceName);
+        if (!taskFile.exists()) {
+            try {
+                saveResource("autotasks/" + resourceName, false);
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+    }
+
     @Override
     public void onDisable() {
+        if (taskManager != null) {
         taskManager.cancelAllTasks();
+        }
     }
 
     private void registerCommands() {
@@ -51,7 +66,6 @@ public class AutoTasks extends JavaPlugin {
         if (cmd != null) {
             cmd.setExecutor(commandHandler);
             cmd.setTabCompleter(commandHandler);
-            cmd.setPermissionMessage("§cNo tienes permiso para este comando");
         }
     }
 

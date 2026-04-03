@@ -1,0 +1,29 @@
+modo: incremental
+utc: '0'
+acciones:
+  - delay: 00:00:05
+    ciclo:
+      paso_delay: 00:00:01
+      variantes:
+        - variable: "coord_x"
+          rango: "100-110"
+          modo_rango: "loop"
+
+        - variable: "color"
+          rango: "red,green,blue,yellow"
+          modo_rango: "pingpong"
+          cada: 1
+
+        - variable: "intensidad"
+          rango_aleatorio: "1,2,3,4,5"
+      comandos:
+        - "say Ejecutando paso %paso% de %pasos_totales%. Color actual: %color%"
+        - comando: "particle flame %coord_x% 64 100 0.5 0.5 0.5 0.1 10"
+          si: "%paso% % 2 == 0"
+
+        - bucle:
+            comando: "execute at @a run summon lightning_bolt ~ ~ ~"
+            veces: "%intensidad%"
+            si: "%intensidad% > 3"
+
+  - stop: "Ciclo de efectos finalizado"

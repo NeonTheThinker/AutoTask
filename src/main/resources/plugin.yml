@@ -1,6 +1,6 @@
 name: AutoTask
 version: '1.0.0'
-main: owleaf.AutoTasks
+main: com.neonthethinker.autotask.AutoTasks
 api-version: 1.20
 author: NeonTheThinker
 website: discord.gg/owleafstudio

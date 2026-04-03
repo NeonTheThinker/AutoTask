@@ -1,14 +1,14 @@
-package owleaf.task;
+package com.neonthethinker.autotask.task;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
-import owleaf.AutoTasks;
-import owleaf.utils.TimeUtils;
-import owleaf.task.handler.CicloHandler;
-import owleaf.task.handler.SecuenciaHandler;
+import com.neonthethinker.autotask.AutoTasks;
+import com.neonthethinker.autotask.utils.TimeUtils;
+import com.neonthethinker.autotask.task.handler.CicloHandler;
+import com.neonthethinker.autotask.task.handler.SecuenciaHandler;
 
 import java.io.File;
 import java.util.*;
@@ -44,7 +44,7 @@ public class TaskManager {
         }
     }
 
-    public boolean executeTask(CommandSender sender, String taskName, long startOffset) {
+    public boolean executeTask(CommandSender sender, String taskName, long startOffset, String targetWorld) {
         YamlConfiguration taskConfig = tasks.get(taskName.toLowerCase());
         if (taskConfig == null) {
             sender.sendMessage("§cTarea no encontrada: " + taskName);
@@ -100,34 +100,71 @@ public class TaskManager {
                 if (baseTicks <= startOffset && !esModoAbsoluto) continue;
                 if (baseTicks <= startOffset && esModoAbsoluto) continue;
 
-                programarComandos(scheduler, (List<?>) accion.get("comandos"), scheduledTicks, currentTasks);
+                programarComandos(scheduler, (List<?>) accion.get("comandos"), scheduledTicks, currentTasks, targetWorld);
 
             } else if (accion.containsKey("ciclo")) {
-                cicloHandler.programar(scheduler, (Map<?, ?>) accion.get("ciclo"), scheduledTicks, currentTasks);
+                cicloHandler.programar(scheduler, (Map<?, ?>) accion.get("ciclo"), scheduledTicks, currentTasks, targetWorld);
             }
         }
 
         long maxDelay = calcularMaxDelay(acciones, startOffset, esModoAbsoluto, utcOffset);
-        if (maxDelay >= 0) {
-            currentTasks.add(scheduler.runTaskLater(plugin, () -> {
-                Bukkit.getConsoleSender().sendMessage("§a" + completionMessage);
 
-                this.stopTask(taskName, null, false);
-            }, maxDelay));
+        Runnable completionTask = () -> {
+            Bukkit.getConsoleSender().sendMessage("§a" + completionMessage);
+            this.stopTask(taskName, null, false);
+        };
+
+        if (maxDelay >= 0) {
+            currentTasks.add(scheduler.runTaskLater(plugin, completionTask, maxDelay));
         } else {
             if (!esModoAbsoluto && currentTasks.isEmpty()) {
-                Bukkit.getConsoleSender().sendMessage("§a" + completionMessage);
-
-                this.stopTask(taskName, null, false);
+                completionTask.run();
             }
         }
 
         activeTasks.put(taskName.toLowerCase(), currentTasks);
         taskStartTimes.put(taskName.toLowerCase(), System.currentTimeMillis());
 
+        String worldMsg = (targetWorld != null) ? " en mundo §b" + targetWorld : "";
         String modoMsg = esModoAbsoluto ? "absoluto" + (!utcOffset.isEmpty() ? " (UTC " + utcOffset + ")" : "") : "incremental";
-        sender.sendMessage("§aTarea '" + taskName + "' iniciada en modo " + modoMsg + " con §e" + currentTasks.size() + " §aacciones programadas");
+        sender.sendMessage("§aTarea '" + taskName + "' iniciada en modo " + modoMsg + worldMsg + " con §e" + currentTasks.size() + " §aacciones programadas");
         return true;
+    }
+
+    public boolean executeTask(CommandSender sender, String taskName, long startOffset) {
+        return executeTask(sender, taskName, startOffset, null);
+    }
+
+    private void programarComandos(BukkitScheduler scheduler, List<?> comandos, long delayTicks, List<BukkitTask> taskList, String targetWorld) {
+        for (Object comandoObj : comandos) {
+            if (comandoObj instanceof String) {
+                String comando = (String) comandoObj;
+
+                taskList.add(scheduler.runTaskLater(plugin, () ->
+                                dispatchCommand(comando, targetWorld),
+                        delayTicks));
+            }
+            else if (comandoObj instanceof Map) {
+                Map<?, ?> comandoMap = (Map<?, ?>) comandoObj;
+                if (comandoMap.containsKey("secuencia")) {
+                    secuenciaHandler.programar(scheduler, (List<Map<?, ?>>) comandoMap.get("secuencia"), delayTicks, taskList, targetWorld);
+                }
+            }
+        }
+    }
+
+    public static void dispatchCommand(String command, String targetWorld) {
+        String finalCommand = command;
+        if (targetWorld != null && !targetWorld.isEmpty()) {
+            String dimension = targetWorld.toLowerCase();
+
+            if (!dimension.contains(":")) {
+                dimension = "minecraft:" + dimension;
+            }
+
+            finalCommand = "execute in " + dimension + " run " + command;
+        }
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
     }
 
     private long calcularMaxDelay(List<Map<?, ?>> acciones, long startOffset, boolean esModoAbsoluto, String utcOffset) {
@@ -171,24 +208,6 @@ public class TaskManager {
             }
         }
         return maxDelay;
-    }
-
-    private void programarComandos(BukkitScheduler scheduler, List<?> comandos, long delayTicks, List<BukkitTask> taskList) {
-        for (Object comandoObj : comandos) {
-            if (comandoObj instanceof String) {
-                String comando = (String) comandoObj;
-
-                taskList.add(scheduler.runTaskLater(plugin, () ->
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), comando),
-                        delayTicks));
-            }
-            else if (comandoObj instanceof Map) {
-                Map<?, ?> comandoMap = (Map<?, ?>) comandoObj;
-                if (comandoMap.containsKey("secuencia")) {
-                    secuenciaHandler.programar(scheduler, (List<Map<?, ?>>) comandoMap.get("secuencia"), delayTicks, taskList);
-                }
-            }
-        }
     }
 
     public boolean stopTask(String taskName, CommandSender sender, boolean showCompletionMessage) {

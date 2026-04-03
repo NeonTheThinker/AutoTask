@@ -1,18 +1,21 @@
-package owleaf;
+package com.neonthethinker.autotask;
 
+import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.util.StringUtil;
-import owleaf.task.TaskManager;
-import owleaf.utils.TimeUtils;
+import com.neonthethinker.autotask.task.TaskManager;
+import com.neonthethinker.autotask.utils.TimeUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class CommandHandler implements TabExecutor {
+public class AutoTaskCommands implements TabExecutor {
     private final TaskManager taskManager;
 
-    public CommandHandler(TaskManager taskManager) {
+    public AutoTaskCommands(TaskManager taskManager) {
         this.taskManager = taskManager;
     }
 
@@ -56,12 +59,21 @@ public class CommandHandler implements TabExecutor {
 
         String taskName = args[0].toLowerCase();
         long startOffset = 0;
+        String targetWorld = null;
 
         if (args.length >= 2) {
-            startOffset = TimeUtils.parseTimeToTicks(args[1]);
+            World world = Bukkit.getWorld(args[1]);
+            if (world != null) {
+                targetWorld = world.getName();
+                if (args.length >= 3) {
+                    startOffset = TimeUtils.parseTimeToTicks(args[2]);
+                }
+            } else {
+                startOffset = TimeUtils.parseTimeToTicks(args[1]);
+            }
         }
 
-        if (!taskManager.executeTask(sender, taskName, startOffset)) {
+        if (!taskManager.executeTask(sender, taskName, startOffset, targetWorld)) {
             sender.sendMessage("§cTarea no encontrada: " + taskName);
             sendAvailableTasks(sender);
         }
@@ -113,6 +125,9 @@ public class CommandHandler implements TabExecutor {
             case "at":
                 if (args.length == 1) {
                     StringUtil.copyPartialMatches(args[0], new ArrayList<>(taskManager.getLoadedTasks()), completions);
+                } else if (args.length == 2) {
+                    List<String> worldNames = Bukkit.getWorlds().stream().map(World::getName).collect(Collectors.toList());
+                    StringUtil.copyPartialMatches(args[0], worldNames, completions);
                 }
                 break;
             case "atstop":
@@ -132,7 +147,7 @@ public class CommandHandler implements TabExecutor {
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage("§6Uso: /at <tarea> [tiempo_inicio] §7- Ejecuta una tarea");
+        sender.sendMessage("§6Uso: /at <tarea> [mundo] [tiempo_inicio] §7- Ejecuta una tarea");
         sender.sendMessage("§6Uso: /atstop <tarea> §7- Detiene una tarea en ejecución");
         sender.sendMessage("§6Uso: /atstatus <ticks|time> §7- Muestra tareas activas");
         sender.sendMessage("§6Uso: /atreload §7- Recarga las tareas");

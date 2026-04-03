@@ -1,10 +1,10 @@
-package owleaf.task.handler;
+package com.neonthethinker.autotask.task.handler;
 
-import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
-import owleaf.AutoTasks;
-import owleaf.utils.TimeUtils;
+import com.neonthethinker.autotask.AutoTasks;
+import com.neonthethinker.autotask.task.TaskManager;
+import com.neonthethinker.autotask.utils.TimeUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -18,7 +18,7 @@ public class SecuenciaHandler {
         this.plugin = plugin;
     }
 
-    public void programar(BukkitScheduler scheduler, List<Map<?, ?>> steps, long baseDelayTicks, List<BukkitTask> taskList) {
+    public void programar(BukkitScheduler scheduler, List<Map<?, ?>> steps, long baseDelayTicks, List<BukkitTask> taskList, String targetWorld) {
 
         for (Map<?, ?> step : steps) {
             long stepDelay = TimeUtils.parseTimeToTicks((String) step.get("delay"));
@@ -29,16 +29,15 @@ public class SecuenciaHandler {
                 String cmd = (String) comandosStep;
 
                 taskList.add(scheduler.runTaskLater(plugin, () ->
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd),
+                                TaskManager.dispatchCommand(cmd, targetWorld),
                         totalDelay));
             } else if (comandosStep instanceof List) {
                 for (Object cmd : (List<?>) comandosStep) {
                     if (cmd instanceof String) {
-
                         String cmdStr = (String) cmd;
 
                         taskList.add(scheduler.runTaskLater(plugin, () ->
-                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmdStr),
+                                        TaskManager.dispatchCommand(cmdStr, targetWorld),
                                 totalDelay));
                     }
                 }

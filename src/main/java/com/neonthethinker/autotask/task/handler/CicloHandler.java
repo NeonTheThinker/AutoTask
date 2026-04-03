@@ -1,10 +1,10 @@
-package owleaf.task.handler;
+package com.neonthethinker.autotask.task.handler;
 
-import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
-import owleaf.AutoTasks;
-import owleaf.utils.TimeUtils;
+import com.neonthethinker.autotask.AutoTasks;
+import com.neonthethinker.autotask.task.TaskManager;
+import com.neonthethinker.autotask.utils.TimeUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +24,7 @@ public class CicloHandler {
         this.plugin = plugin;
     }
 
-    public void programar(BukkitScheduler scheduler, Map<?, ?> cicloMap, long scheduledTicks, List<BukkitTask> currentTasks) {
+    public void programar(BukkitScheduler scheduler, Map<?, ?> cicloMap, long scheduledTicks, List<BukkitTask> currentTasks, String targetWorld) {
         String pasoDelayStr = (String) cicloMap.get("paso_delay");
         List<?> comandosPlantilla = (List<?>) cicloMap.get("comandos");
         List<Map<?, ?>> variantes = (List<Map<?, ?>>) cicloMap.get("variantes");
@@ -42,7 +42,7 @@ public class CicloHandler {
 
         if (variantes == null || variantes.isEmpty()) {
             if (pasosFijos > 0) {
-                programarCicloSimple(scheduler, comandosPlantilla, scheduledTicks, TimeUtils.parseTimeToTicks(pasoDelayStr), pasosFijos, currentTasks);
+                programarCicloSimple(scheduler, comandosPlantilla, scheduledTicks, TimeUtils.parseTimeToTicks(pasoDelayStr), pasosFijos, currentTasks, targetWorld);
             } else {
                 plugin.getLogger().warning("Ciclo sin 'variantes' y sin 'pasos' definidos");
             }
@@ -121,7 +121,6 @@ public class CicloHandler {
                 } else if (cmdPlantillaObj instanceof Map) {
                     Map<?, ?> cmdMap = (Map<?, ?>) cmdPlantillaObj;
                     if (cmdMap.containsKey("bucle")) {
-                        esBucle = true;
                         Map<?, ?> bucleMap = (Map<?, ?>) cmdMap.get("bucle");
                         comandoPaso = (String) bucleMap.get("comando");
                         condicion = (String) bucleMap.get("si");
@@ -158,7 +157,7 @@ public class CicloHandler {
                     String comandoReal = reemplazarTodasVariables(comandoPaso, i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio);
 
                     currentTasks.add(scheduler.runTaskLater(plugin, () ->
-                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), comandoReal),
+                                    TaskManager.dispatchCommand(comandoReal, targetWorld),
                             finalDelay));
                 }
             }
@@ -198,7 +197,7 @@ public class CicloHandler {
         return scheduledDelay;
     }
 
-    private void programarCicloSimple(BukkitScheduler scheduler, List<?> comandos, long startDelayTicks, long pasoDelayTicks, int pasos, List<BukkitTask> taskList) {
+    private void programarCicloSimple(BukkitScheduler scheduler, List<?> comandos, long startDelayTicks, long pasoDelayTicks, int pasos, List<BukkitTask> taskList, String targetWorld) {
         long currentLoopDelay = startDelayTicks;
         final String maxStepsStr = String.valueOf(pasos);
 
@@ -223,7 +222,6 @@ public class CicloHandler {
                 } else if (comandoObj instanceof Map) {
                     Map<?, ?> cmdMap = (Map<?, ?>) comandoObj;
                     if (cmdMap.containsKey("bucle")) {
-                        esBucle = true;
                         Map<?, ?> bucleMap = (Map<?, ?>) cmdMap.get("bucle");
                         comandoPaso = (String) bucleMap.get("comando");
                         condicion = (String) bucleMap.get("si");
@@ -269,7 +267,7 @@ public class CicloHandler {
                             .replace("%pasos_totales%", maxStepsStr);
 
                     taskList.add(scheduler.runTaskLater(plugin, () ->
-                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), comandoReal),
+                                    TaskManager.dispatchCommand(comandoReal, targetWorld),
                             finalDelay));
                 }
             }
