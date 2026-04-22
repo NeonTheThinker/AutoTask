@@ -1,9 +1,9 @@
-package com.neonthethinker.autotask;
+package com.me.neonthethinker.autotask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
-import com.neonthethinker.autotask.task.TaskManager;
+import com.me.neonthethinker.autotask.task.TaskManager;
 
 import java.io.File;
 

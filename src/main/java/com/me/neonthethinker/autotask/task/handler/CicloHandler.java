@@ -1,10 +1,10 @@
-package com.neonthethinker.autotask.task.handler;
+package com.me.neonthethinker.autotask.task.handler;
 
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
-import com.neonthethinker.autotask.AutoTasks;
-import com.neonthethinker.autotask.task.TaskManager;
-import com.neonthethinker.autotask.utils.TimeUtils;
+import com.me.neonthethinker.autotask.AutoTasks;
+import com.me.neonthethinker.autotask.task.TaskManager;
+import com.me.neonthethinker.autotask.utils.TimeUtils;
 
 import java.util.ArrayList;
 import java.util.List;

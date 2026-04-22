@@ -1,14 +1,14 @@
-package com.neonthethinker.autotask.task;
+package com.me.neonthethinker.autotask.task;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
-import com.neonthethinker.autotask.AutoTasks;
-import com.neonthethinker.autotask.utils.TimeUtils;
-import com.neonthethinker.autotask.task.handler.CicloHandler;
-import com.neonthethinker.autotask.task.handler.SecuenciaHandler;
+import com.me.neonthethinker.autotask.AutoTasks;
+import com.me.neonthethinker.autotask.utils.TimeUtils;
+import com.me.neonthethinker.autotask.task.handler.CicloHandler;
+import com.me.neonthethinker.autotask.task.handler.SecuenciaHandler;
 
 import java.io.File;
 import java.util.*;

@@ -1,4 +1,4 @@
-package com.neonthethinker.autotask;
+package com.me.neonthethinker.autotask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -6,8 +6,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.util.StringUtil;
-import com.neonthethinker.autotask.task.TaskManager;
-import com.neonthethinker.autotask.utils.TimeUtils;
+import com.me.neonthethinker.autotask.task.TaskManager;
+import com.me.neonthethinker.autotask.utils.TimeUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
