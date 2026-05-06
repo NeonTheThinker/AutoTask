@@ -9,7 +9,6 @@ import com.me.neonthethinker.autotask.utils.TimeUtils;
 import java.util.List;
 import java.util.Map;
 
-
 public class SecuenciaHandler {
 
     private final AutoTasks plugin;
@@ -18,7 +17,7 @@ public class SecuenciaHandler {
         this.plugin = plugin;
     }
 
-    public void programar(BukkitScheduler scheduler, List<Map<?, ?>> steps, long baseDelayTicks, List<BukkitTask> taskList, String targetWorld) {
+    public void programar(BukkitScheduler scheduler, List<Map<?, ?>> steps, long baseDelayTicks, List<BukkitTask> taskList, String targetWorld, boolean usePapi) {
 
         for (Map<?, ?> step : steps) {
             long stepDelay = TimeUtils.parseTimeToTicks((String) step.get("delay"));
@@ -29,7 +28,7 @@ public class SecuenciaHandler {
                 String cmd = (String) comandosStep;
 
                 taskList.add(scheduler.runTaskLater(plugin, () ->
-                                TaskManager.dispatchCommand(cmd, targetWorld),
+                                TaskManager.dispatchCommand(cmd, targetWorld, usePapi),
                         totalDelay));
             } else if (comandosStep instanceof List) {
                 for (Object cmd : (List<?>) comandosStep) {
@@ -37,7 +36,7 @@ public class SecuenciaHandler {
                         String cmdStr = (String) cmd;
 
                         taskList.add(scheduler.runTaskLater(plugin, () ->
-                                        TaskManager.dispatchCommand(cmdStr, targetWorld),
+                                        TaskManager.dispatchCommand(cmdStr, targetWorld, usePapi),
                                 totalDelay));
                     }
                 }

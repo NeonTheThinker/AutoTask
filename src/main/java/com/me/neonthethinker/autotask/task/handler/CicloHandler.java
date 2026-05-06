@@ -19,12 +19,11 @@ public class CicloHandler {
     private static final Pattern CONDICION_PATTERN = Pattern.compile("(.+?)(==|!=|>=|<=|>|<)(.+)");
     private static final Pattern MODULO_CONDICION_PATTERN = Pattern.compile("(.+?)%(.+?)(==|!=)(.+)");
 
-
     public CicloHandler(AutoTasks plugin) {
         this.plugin = plugin;
     }
 
-    public void programar(BukkitScheduler scheduler, Map<?, ?> cicloMap, long scheduledTicks, List<BukkitTask> currentTasks, String targetWorld) {
+    public void programar(BukkitScheduler scheduler, Map<?, ?> cicloMap, long scheduledTicks, List<BukkitTask> currentTasks, String targetWorld, boolean usePapi) {
         String pasoDelayStr = (String) cicloMap.get("paso_delay");
         List<?> comandosPlantilla = (List<?>) cicloMap.get("comandos");
         List<Map<?, ?>> variantes = (List<Map<?, ?>>) cicloMap.get("variantes");
@@ -42,7 +41,7 @@ public class CicloHandler {
 
         if (variantes == null || variantes.isEmpty()) {
             if (pasosFijos > 0) {
-                programarCicloSimple(scheduler, comandosPlantilla, scheduledTicks, TimeUtils.parseTimeToTicks(pasoDelayStr), pasosFijos, currentTasks, targetWorld);
+                programarCicloSimple(scheduler, comandosPlantilla, scheduledTicks, TimeUtils.parseTimeToTicks(pasoDelayStr), pasosFijos, currentTasks, targetWorld, usePapi);
             } else {
                 plugin.getLogger().warning("Ciclo sin 'variantes' y sin 'pasos' definidos");
             }
@@ -114,7 +113,6 @@ public class CicloHandler {
                 String comandoPaso;
                 String condicion = null;
                 int veces = 1;
-                boolean esBucle = false;
 
                 if (cmdPlantillaObj instanceof String) {
                     comandoPaso = (String) cmdPlantillaObj;
@@ -157,7 +155,7 @@ public class CicloHandler {
                     String comandoReal = reemplazarTodasVariables(comandoPaso, i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio);
 
                     currentTasks.add(scheduler.runTaskLater(plugin, () ->
-                                    TaskManager.dispatchCommand(comandoReal, targetWorld),
+                                    TaskManager.dispatchCommand(comandoReal, targetWorld, usePapi),
                             finalDelay));
                 }
             }
@@ -197,7 +195,7 @@ public class CicloHandler {
         return scheduledDelay;
     }
 
-    private void programarCicloSimple(BukkitScheduler scheduler, List<?> comandos, long startDelayTicks, long pasoDelayTicks, int pasos, List<BukkitTask> taskList, String targetWorld) {
+    private void programarCicloSimple(BukkitScheduler scheduler, List<?> comandos, long startDelayTicks, long pasoDelayTicks, int pasos, List<BukkitTask> taskList, String targetWorld, boolean usePapi) {
         long currentLoopDelay = startDelayTicks;
         final String maxStepsStr = String.valueOf(pasos);
 
@@ -216,7 +214,6 @@ public class CicloHandler {
                 String comandoPaso;
                 String condicion = null;
                 int veces = 1;
-                boolean esBucle = false;
                 if (comandoObj instanceof String) {
                     comandoPaso = (String) comandoObj;
                 } else if (comandoObj instanceof Map) {
@@ -267,7 +264,7 @@ public class CicloHandler {
                             .replace("%pasos_totales%", maxStepsStr);
 
                     taskList.add(scheduler.runTaskLater(plugin, () ->
-                                    TaskManager.dispatchCommand(comandoReal, targetWorld),
+                                    TaskManager.dispatchCommand(comandoReal, targetWorld, usePapi),
                             finalDelay));
                 }
             }
@@ -311,6 +308,7 @@ public class CicloHandler {
         }
         return valor;
     }
+
     private String reemplazarTodasVariables(String texto, int i, String pasoStr, String iStr, String maxStepsStr,
                                             List<String> placeholders, List<List<String>> listasDeValores,
                                             List<Integer> cadaN, List<String> modoRangos, List<Boolean> esAleatorio) {
@@ -327,6 +325,7 @@ public class CicloHandler {
         }
         return texto;
     }
+
     private List<String> parseRango(String rango) {
         List<String> valores = new ArrayList<>();
         if (rango == null || rango.isEmpty()) {
@@ -358,6 +357,7 @@ public class CicloHandler {
         }
         return valores;
     }
+
     private boolean evaluarCondicion(String condicion) {
         if (condicion == null || condicion.isEmpty()) {
             return false;

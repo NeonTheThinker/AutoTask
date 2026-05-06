@@ -8,6 +8,7 @@ import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
 import com.me.neonthethinker.autotask.AutoTasks;
 import com.me.neonthethinker.autotask.utils.TimeUtils;
+import com.me.neonthethinker.autotask.utils.PlaceholderUtils;
 import com.me.neonthethinker.autotask.task.handler.CicloHandler;
 import com.me.neonthethinker.autotask.task.handler.SecuenciaHandler;
 
@@ -58,6 +59,7 @@ public class TaskManager {
             return false;
         }
 
+        final boolean globalUsePapi = taskConfig.getBoolean("placeholder", false);
         final String modo = taskConfig.getString("modo", "incremental").toLowerCase();
         final boolean esModoAbsoluto = modo.equals("absoluto");
         final String utcOffset = taskConfig.getString("utc", "");
@@ -102,11 +104,18 @@ public class TaskManager {
                     if (baseTicks < 0) continue;
                     long scheduledTicks = Math.max(0, baseTicks - startOffset);
 
+                    boolean actionUsePapi = globalUsePapi;
+                    if (accion.containsKey("papi")) {
+                        Object papiObj = accion.get("papi");
+                        if (papiObj instanceof Boolean) {
+                            actionUsePapi = (Boolean) papiObj;
+                        }
+                    }
                     if (accion.containsKey("comandos")) {
                         if (baseTicks <= startOffset && !esModoAbsoluto) continue;
-                        programarComandos(scheduler, (List<?>) accion.get("comandos"), scheduledTicks, currentTasks, targetWorld);
+                        programarComandos(scheduler, (List<?>) accion.get("comandos"), scheduledTicks, currentTasks, targetWorld, actionUsePapi);
                     } else if (accion.containsKey("ciclo")) {
-                        cicloHandler.programar(scheduler, (Map<?, ?>) accion.get("ciclo"), scheduledTicks, currentTasks, targetWorld);
+                        cicloHandler.programar(scheduler, (Map<?, ?>) accion.get("ciclo"), scheduledTicks, currentTasks, targetWorld, actionUsePapi);
                     }
                 }
 
@@ -133,29 +142,32 @@ public class TaskManager {
         return true;
     }
 
-    private void programarComandos(BukkitScheduler scheduler, List<?> comandos, long delayTicks, List<BukkitTask> taskList, String targetWorld) {
+    private void programarComandos(BukkitScheduler scheduler, List<?> comandos, long delayTicks, List<BukkitTask> taskList, String targetWorld, boolean usePapi) {
         for (Object comandoObj : comandos) {
             if (comandoObj instanceof String) {
                 String comando = (String) comandoObj;
 
                 taskList.add(scheduler.runTaskLater(plugin, () ->
-                        dispatchCommand(comando, targetWorld), delayTicks));
+                        dispatchCommand(comando, targetWorld, usePapi), delayTicks));
             }
             else if (comandoObj instanceof Map) {
                 Map<?, ?> comandoMap = (Map<?, ?>) comandoObj;
                 if (comandoMap.containsKey("secuencia")) {
-                    secuenciaHandler.programar(scheduler, (List<Map<?, ?>>) comandoMap.get("secuencia"), delayTicks, taskList, targetWorld);
+                    secuenciaHandler.programar(scheduler, (List<Map<?, ?>>) comandoMap.get("secuencia"), delayTicks, taskList, targetWorld, usePapi);
                 }
             }
         }
     }
 
-    public static void dispatchCommand(String command, String targetWorld) {
+    public static void dispatchCommand(String command, String targetWorld, boolean usePapi) {
         String finalCommand = command;
+        if (usePapi) {
+            finalCommand = PlaceholderUtils.replace(null, finalCommand);
+        }
         if (targetWorld != null && !targetWorld.isEmpty()) {
             String dimension = targetWorld.toLowerCase();
             if (!dimension.contains(":")) dimension = "minecraft:" + dimension;
-            finalCommand = "execute in " + dimension + " run " + command;
+            finalCommand = "execute in " + dimension + " run " + finalCommand;
         }
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
     }

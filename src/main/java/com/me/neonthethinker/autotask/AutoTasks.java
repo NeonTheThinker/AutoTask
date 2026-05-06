@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 import com.me.neonthethinker.autotask.task.TaskManager;
+import com.me.neonthethinker.autotask.utils.PlaceholderUtils;
 
 import java.io.File;
 
@@ -15,6 +16,7 @@ public class AutoTasks extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        PlaceholderUtils.init();
 
         if (!getDataFolder().exists()) {
             getDataFolder().mkdirs();
@@ -27,10 +29,16 @@ public class AutoTasks extends JavaPlugin {
 
         saveDefaultTask("absoluto.yml");
         saveDefaultTask("incremental.yml");
+        PlaceholderUtils.init();
         this.taskManager = new TaskManager(this);
         this.commandHandler = new AutoTaskCommands(taskManager);
         registerCommands();
         taskManager.reloadTasks();
+        if (PlaceholderUtils.isPapiEnabled()) {
+            getLogger().info("AutoTask - PlaceholderAPI Activado");
+        } else {
+            getLogger().info("AutoTask - PlaceholderAPI Desactivado.");
+        }
 
         Bukkit.getScheduler().runTaskLater(this, () -> {
             taskManager.reloadTasks();
