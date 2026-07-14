@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "autotask",
+  "version": "${version}",
+  "name": "AutoTask",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/autotask/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "me.neonthethinker.autotask.Autotask"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": ">=1.20.5 <=1.21.10"
+  }
+}

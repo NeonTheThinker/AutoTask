@@ -1,0 +1,21 @@
+modo: incremental
+utc: '0'
+acciones:
+- delay: 00:00:10
+  comandos:
+  - say ¡Primer mensaje a los 10 segundos!
+  - effect give @a speed 30 0
+- delay: 00:00:50
+  comandos:
+  - say ¡Este aparece a los 50 segundos!
+  - secuencia:
+    - delay: 00:00:05
+      comandos: weather clear
+    - delay: t200
+      comandos:
+      - say ¡Ahora han pasado 60 segundos!
+      - time set day
+- delay: 00:01:30
+  comandos:
+  - say ¡Mensaje final a 90 segundos!
+- stop: Tarea Incremental Finalizada
