@@ -1,1 +1,1 @@
-rootProject.name = "AutoTask-Plugin"
+rootProject.name = "AutoTask-Bukkit"
