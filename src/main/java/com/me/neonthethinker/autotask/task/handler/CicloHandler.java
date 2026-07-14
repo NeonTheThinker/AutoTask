@@ -1,31 +1,30 @@
 package com.me.neonthethinker.autotask.task.handler;
 
-import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
-import com.me.neonthethinker.autotask.AutoTasks;
-import com.me.neonthethinker.autotask.task.TaskManager;
+import com.me.neonthethinker.autotask.utils.PluginTask;
+import com.me.neonthethinker.autotask.utils.TickScheduler;
 import com.me.neonthethinker.autotask.utils.TimeUtils;
+import com.me.neonthethinker.autotask.task.TaskManager;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CicloHandler {
 
-    private final AutoTasks plugin;
     private static final Pattern CONDICION_PATTERN = Pattern.compile("(.+?)(==|!=|>=|<=|>|<)(.+)");
     private static final Pattern MODULO_CONDICION_PATTERN = Pattern.compile("(.+?)%(.+?)(==|!=)(.+)");
 
-    public CicloHandler(AutoTasks plugin) {
-        this.plugin = plugin;
+    public CicloHandler() {
     }
 
-    public void programar(BukkitScheduler scheduler, Map<?, ?> cicloMap, long scheduledTicks, List<BukkitTask> currentTasks, String targetWorld, boolean usePapi) {
+    public void programar(Map<?, ?> cicloMap, long scheduledTicks, List<PluginTask> currentTasks, String targetWorld, boolean usePapi, UUID triggerPlayerUuid) {
         String pasoDelayStr = (String) cicloMap.get("paso_delay");
         List<?> comandosPlantilla = (List<?>) cicloMap.get("comandos");
+        List<?> comandosJugadorPlantilla = (List<?>) cicloMap.get("comandos_jugador");
         List<Map<?, ?>> variantes = (List<Map<?, ?>>) cicloMap.get("variantes");
 
         Object pasosObj = cicloMap.get("pasos");
@@ -34,16 +33,13 @@ public class CicloHandler {
             pasosFijos = ((Number) pasosObj).intValue();
         }
 
-        if (pasoDelayStr == null || comandosPlantilla == null) {
-            plugin.getLogger().warning("Acción de ciclo mal configurada (falta paso_delay o comandos)");
+        if (pasoDelayStr == null || (comandosPlantilla == null && comandosJugadorPlantilla == null)) {
             return;
         }
 
         if (variantes == null || variantes.isEmpty()) {
             if (pasosFijos > 0) {
-                programarCicloSimple(scheduler, comandosPlantilla, scheduledTicks, TimeUtils.parseTimeToTicks(pasoDelayStr), pasosFijos, currentTasks, targetWorld, usePapi);
-            } else {
-                plugin.getLogger().warning("Ciclo sin 'variantes' y sin 'pasos' definidos");
+                programarCicloSimple(comandosPlantilla, comandosJugadorPlantilla, scheduledTicks, TimeUtils.parseTimeToTicks(pasoDelayStr), pasosFijos, currentTasks, targetWorld, usePapi, triggerPlayerUuid);
             }
             return;
         }
@@ -108,58 +104,68 @@ public class CicloHandler {
             final String pasoStr = String.valueOf(i + 1);
             final String iStr = String.valueOf(i);
 
-            for (Object cmdPlantillaObj : comandosPlantilla) {
+            if (comandosPlantilla != null) {
+                ejecutarBucleComandos(comandosPlantilla, i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio, finalDelay, currentTasks, targetWorld, usePapi, false, triggerPlayerUuid);
+            }
+            if (comandosJugadorPlantilla != null) {
+                ejecutarBucleComandos(comandosJugadorPlantilla, i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio, finalDelay, currentTasks, targetWorld, usePapi, true, triggerPlayerUuid);
+            }
+            currentLoopDelay += pasoDelayTicks;
+        }
+    }
 
-                String comandoPaso;
-                String condicion = null;
-                int veces = 1;
+    private void ejecutarBucleComandos(List<?> comandos, int i, String pasoStr, String iStr, String maxStepsStr,
+                                       List<String> placeholders, List<List<String>> listasDeValores,
+                                       List<Integer> cadaN, List<String> modoRangos, List<Boolean> esAleatorio,
+                                       long finalDelay, List<PluginTask> currentTasks, String targetWorld, boolean usePapi, boolean asPlayer, UUID triggerPlayerUuid) {
+        for (Object cmdPlantillaObj : comandos) {
+            String comandoPaso;
+            String condicion = null;
+            int veces = 1;
 
-                if (cmdPlantillaObj instanceof String) {
-                    comandoPaso = (String) cmdPlantillaObj;
-                } else if (cmdPlantillaObj instanceof Map) {
-                    Map<?, ?> cmdMap = (Map<?, ?>) cmdPlantillaObj;
-                    if (cmdMap.containsKey("bucle")) {
-                        Map<?, ?> bucleMap = (Map<?, ?>) cmdMap.get("bucle");
-                        comandoPaso = (String) bucleMap.get("comando");
-                        condicion = (String) bucleMap.get("si");
-                        Object vecesObj = bucleMap.get("veces");
-                        if (vecesObj != null) {
-                            String vecesStr = reemplazarTodasVariables(vecesObj.toString(), i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio);
-                            try {
-                                veces = Integer.parseInt(vecesStr);
-                            } catch (NumberFormatException e) {
-                                plugin.getLogger().warning("Valor de 'veces' inválido en bucle: " + vecesStr);
-                                veces = 0;
-                            }
-                        } else {
+            if (cmdPlantillaObj instanceof String) {
+                comandoPaso = (String) cmdPlantillaObj;
+            } else if (cmdPlantillaObj instanceof Map) {
+                Map<?, ?> cmdMap = (Map<?, ?>) cmdPlantillaObj;
+                if (cmdMap.containsKey("bucle")) {
+                    Map<?, ?> bucleMap = (Map<?, ?>) cmdMap.get("bucle");
+                    comandoPaso = (String) bucleMap.get("comando");
+                    condicion = (String) bucleMap.get("si");
+                    Object vecesObj = bucleMap.get("veces");
+                    if (vecesObj != null) {
+                        String vecesStr = reemplazarTodasVariables(vecesObj.toString(), i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio);
+                        try {
+                            veces = Integer.parseInt(vecesStr);
+                        } catch (NumberFormatException e) {
                             veces = 0;
                         }
-                    } else if (cmdMap.containsKey("comando")) {
-                        comandoPaso = (String) cmdMap.get("comando");
-                        condicion = (String) cmdMap.get("si");
                     } else {
-                        continue;
+                        veces = 0;
                     }
+                } else if (cmdMap.containsKey("comando")) {
+                    comandoPaso = (String) cmdMap.get("comando");
+                    condicion = (String) cmdMap.get("si");
                 } else {
                     continue;
                 }
-                if (comandoPaso == null || veces < 1) continue;
-                if (condicion != null) {
-                    condicion = reemplazarTodasVariables(condicion, i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio);
-                    if (!evaluarCondicion(condicion)) {
-                        continue;
-                    }
-                }
-
-                for (int k = 0; k < veces; k++) {
-                    String comandoReal = reemplazarTodasVariables(comandoPaso, i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio);
-
-                    currentTasks.add(scheduler.runTaskLater(plugin, () ->
-                                    TaskManager.dispatchCommand(comandoReal, targetWorld, usePapi),
-                            finalDelay));
+            } else {
+                continue;
+            }
+            if (comandoPaso == null || veces < 1) continue;
+            if (condicion != null) {
+                condicion = reemplazarTodasVariables(condicion, i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio);
+                if (!evaluarCondicion(condicion)) {
+                    continue;
                 }
             }
-            currentLoopDelay += pasoDelayTicks;
+
+            for (int k = 0; k < veces; k++) {
+                String comandoReal = reemplazarTodasVariables(comandoPaso, i, pasoStr, iStr, maxStepsStr, placeholders, listasDeValores, cadaN, modoRangos, esAleatorio);
+
+                currentTasks.add(TickScheduler.runTaskLater(() ->
+                                TaskManager.dispatchCommand(comandoReal, targetWorld, usePapi, asPlayer, triggerPlayerUuid),
+                        finalDelay));
+            }
         }
     }
 
@@ -195,7 +201,7 @@ public class CicloHandler {
         return scheduledDelay;
     }
 
-    private void programarCicloSimple(BukkitScheduler scheduler, List<?> comandos, long startDelayTicks, long pasoDelayTicks, int pasos, List<BukkitTask> taskList, String targetWorld, boolean usePapi) {
+    private void programarCicloSimple(List<?> comandos, List<?> comandosJugador, long startDelayTicks, long pasoDelayTicks, int pasos, List<PluginTask> taskList, String targetWorld, boolean usePapi, UUID triggerPlayerUuid) {
         long currentLoopDelay = startDelayTicks;
         final String maxStepsStr = String.valueOf(pasos);
 
@@ -209,72 +215,79 @@ public class CicloHandler {
             final String pasoStr = String.valueOf(i + 1);
             final String iStr = String.valueOf(i);
 
-            for (Object comandoObj : comandos) {
-
-                String comandoPaso;
-                String condicion = null;
-                int veces = 1;
-                if (comandoObj instanceof String) {
-                    comandoPaso = (String) comandoObj;
-                } else if (comandoObj instanceof Map) {
-                    Map<?, ?> cmdMap = (Map<?, ?>) comandoObj;
-                    if (cmdMap.containsKey("bucle")) {
-                        Map<?, ?> bucleMap = (Map<?, ?>) cmdMap.get("bucle");
-                        comandoPaso = (String) bucleMap.get("comando");
-                        condicion = (String) bucleMap.get("si");
-                        Object vecesObj = bucleMap.get("veces");
-                        if (vecesObj != null) {
-                            String vecesStr = vecesObj.toString()
-                                    .replace("%paso%", pasoStr)
-                                    .replace("%i%", iStr)
-                                    .replace("%pasos_totales%", maxStepsStr);
-                            try {
-                                veces = Integer.parseInt(vecesStr);
-                            } catch (NumberFormatException e) {
-                                plugin.getLogger().warning("Valor de 'veces' inválido en bucle: " + vecesStr);
-                                veces = 0;
-                            }
-                        } else {
-                            veces = 0;
-                        }
-                    } else if (cmdMap.containsKey("comando")) {
-                        comandoPaso = (String) cmdMap.get("comando");
-                        condicion = (String) cmdMap.get("si");
-                    } else {
-                        continue;
-                    }
-                } else {
-                    continue;
-                }
-                if (comandoPaso == null || veces < 1) continue;
-                if (condicion != null) {
-                    condicion = condicion
-                            .replace("%paso%", pasoStr)
-                            .replace("%i%", iStr)
-                            .replace("%pasos_totales%", maxStepsStr);
-                    if (!evaluarCondicion(condicion)) {
-                        continue;
-                    }
-                }
-
-                for (int k = 0; k < veces; k++) {
-                    String comandoReal = comandoPaso
-                            .replace("%paso%", pasoStr)
-                            .replace("%i%", iStr)
-                            .replace("%pasos_totales%", maxStepsStr);
-
-                    taskList.add(scheduler.runTaskLater(plugin, () ->
-                                    TaskManager.dispatchCommand(comandoReal, targetWorld, usePapi),
-                            finalDelay));
-                }
+            if (comandos != null) {
+                ejecutarBucleSimpleComandos(comandos, iStr, pasoStr, maxStepsStr, finalDelay, taskList, targetWorld, usePapi, false, triggerPlayerUuid);
+            }
+            if (comandosJugador != null) {
+                ejecutarBucleSimpleComandos(comandosJugador, iStr, pasoStr, maxStepsStr, finalDelay, taskList, targetWorld, usePapi, true, triggerPlayerUuid);
             }
             currentLoopDelay += pasoDelayTicks;
         }
     }
 
+    private void ejecutarBucleSimpleComandos(List<?> comandos, String iStr, String pasoStr, String maxStepsStr, long finalDelay, List<PluginTask> taskList, String targetWorld, boolean usePapi, boolean asPlayer, UUID triggerPlayerUuid) {
+        for (Object comandoObj : comandos) {
+            String comandoPaso;
+            String condicion = null;
+            int veces = 1;
+            if (comandoObj instanceof String) {
+                comandoPaso = (String) comandoObj;
+            } else if (comandoObj instanceof Map) {
+                Map<?, ?> cmdMap = (Map<?, ?>) comandoObj;
+                if (cmdMap.containsKey("bucle")) {
+                    Map<?, ?> bucleMap = (Map<?, ?>) cmdMap.get("bucle");
+                    comandoPaso = (String) bucleMap.get("comando");
+                    condicion = (String) bucleMap.get("si");
+                    Object vecesObj = bucleMap.get("veces");
+                    if (vecesObj != null) {
+                        String vecesStr = vecesObj.toString()
+                                .replace("%paso%", pasoStr)
+                                .replace("%i%", iStr)
+                                .replace("%pasos_totales%", maxStepsStr);
+                        try {
+                            veces = Integer.parseInt(vecesStr);
+                        } catch (NumberFormatException e) {
+                            veces = 0;
+                        }
+                    } else {
+                        veces = 0;
+                    }
+                } else if (cmdMap.containsKey("comando")) {
+                    comandoPaso = (String) cmdMap.get("comando");
+                    condicion = (String) cmdMap.get("si");
+                } else {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+            if (comandoPaso == null || veces < 1) continue;
+            if (condicion != null) {
+                condicion = condicion
+                        .replace("%paso%", pasoStr)
+                        .replace("%i%", iStr)
+                        .replace("%pasos_totales%", maxStepsStr);
+                if (!evaluarCondicion(condicion)) {
+                    continue;
+                }
+            }
+
+            for (int k = 0; k < veces; k++) {
+                String comandoReal = comandoPaso
+                        .replace("%paso%", pasoStr)
+                        .replace("%i%", iStr)
+                        .replace("%pasos_totales%", maxStepsStr);
+
+                taskList.add(TickScheduler.runTaskLater(() ->
+                                TaskManager.dispatchCommand(comandoReal, targetWorld, usePapi, asPlayer, triggerPlayerUuid),
+                        finalDelay));
+            }
+        }
+    }
+
     private String obtenerValorVariante(int varianteIndex, int i,
-                                        List<String> placeholders, List<List<String>> listasDeValores,
-                                        List<Integer> cadaN, List<String> modoRangos, List<Boolean> esAleatorio) {
+                                         List<String> placeholders, List<List<String>> listasDeValores,
+                                         List<Integer> cadaN, List<String> modoRangos, List<Boolean> esAleatorio) {
 
         List<String> listaValores = listasDeValores.get(varianteIndex);
         int listaSize = listaValores.size();
@@ -350,7 +363,7 @@ public class CicloHandler {
                     }
                 }
             } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
-                plugin.getLogger().warning("Formato de rango inválido en ciclo: " + rango);
+                valores.add(rango.trim());
             }
         } else {
             valores.add(rango.trim());
@@ -402,7 +415,6 @@ public class CicloHandler {
                 }
             }
         } catch (Exception e) {
-            plugin.getLogger().warning("Error al evaluar condición de ciclo: " + condicion);
             return false;
         }
         return false;

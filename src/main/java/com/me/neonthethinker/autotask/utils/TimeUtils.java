@@ -5,6 +5,8 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.time.ZoneId;
+import java.time.Instant;
 
 public class TimeUtils {
     public static long parseTimeToTicks(String tiempo) {
@@ -93,12 +95,29 @@ public class TimeUtils {
         return String.format("%02d:%02d:%02d", horas, minutos, segundos);
     }
 
-    public static String getCurrentTimeWithOffset(String utcOffset) {
+    public static String getCurrentTimeFormatted(String utcOffset) {
         ZonedDateTime now = ZonedDateTime.now();
         ZonedDateTime adjusted = applyUTCOffset(now, utcOffset);
+        return adjusted.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+    }
 
-        return "Hora servidor: " + now.format(DateTimeFormatter.ofPattern("HH:mm:ss")) +
-                " | Hora ajustada: " + adjusted.format(DateTimeFormatter.ofPattern("HH:mm:ss")) +
-                " | UTC: " + utcOffset;
+    public static long getAbsoluteTicksOffset(String targetTimeStr, long startTime, String utcOffset) {
+        if (!isSystemTimeFormat(targetTimeStr)) return 0;
+        try {
+            LocalTime targetTime = LocalTime.parse(targetTimeStr, DateTimeFormatter.ofPattern("H:mm:ss"));
+            ZonedDateTime startDateTime = applyUTCOffset(ZonedDateTime.ofInstant(Instant.ofEpochMilli(startTime), ZoneId.systemDefault()), utcOffset);
+            LocalTime startLocalTime = startDateTime.toLocalTime();
+            
+            long targetSeconds = targetTime.toSecondOfDay();
+            long startSeconds = startLocalTime.toSecondOfDay();
+            
+            if (targetSeconds >= startSeconds) {
+                return (targetSeconds - startSeconds) * 20;
+            } else {
+                return -1;
+            }
+        } catch (Exception e) {
+            return 0;
+        }
     }
 }

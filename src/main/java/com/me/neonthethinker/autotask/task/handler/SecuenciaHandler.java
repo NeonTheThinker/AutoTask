@@ -1,44 +1,46 @@
 package com.me.neonthethinker.autotask.task.handler;
 
-import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
-import com.me.neonthethinker.autotask.AutoTasks;
-import com.me.neonthethinker.autotask.task.TaskManager;
+import com.me.neonthethinker.autotask.utils.PluginTask;
+import com.me.neonthethinker.autotask.utils.TickScheduler;
 import com.me.neonthethinker.autotask.utils.TimeUtils;
+import com.me.neonthethinker.autotask.task.TaskManager;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class SecuenciaHandler {
 
-    private final AutoTasks plugin;
-
-    public SecuenciaHandler(AutoTasks plugin) {
-        this.plugin = plugin;
+    public SecuenciaHandler() {
     }
 
-    public void programar(BukkitScheduler scheduler, List<Map<?, ?>> steps, long baseDelayTicks, List<BukkitTask> taskList, String targetWorld, boolean usePapi) {
-
+    public void programar(List<Map<?, ?>> steps, long baseDelayTicks, List<PluginTask> taskList, String targetWorld, boolean usePapi, UUID triggerPlayerUuid) {
         for (Map<?, ?> step : steps) {
             long stepDelay = TimeUtils.parseTimeToTicks((String) step.get("delay"));
-            Object comandosStep = step.get("comandos");
             long totalDelay = baseDelayTicks + stepDelay;
 
-            if (comandosStep instanceof String) {
-                String cmd = (String) comandosStep;
+            if (step.containsKey("comandos")) {
+                programarPasoComandos(step.get("comandos"), totalDelay, taskList, targetWorld, usePapi, false, triggerPlayerUuid);
+            }
+            if (step.containsKey("comandos_jugador")) {
+                programarPasoComandos(step.get("comandos_jugador"), totalDelay, taskList, targetWorld, usePapi, true, triggerPlayerUuid);
+            }
+        }
+    }
 
-                taskList.add(scheduler.runTaskLater(plugin, () ->
-                                TaskManager.dispatchCommand(cmd, targetWorld, usePapi),
-                        totalDelay));
-            } else if (comandosStep instanceof List) {
-                for (Object cmd : (List<?>) comandosStep) {
-                    if (cmd instanceof String) {
-                        String cmdStr = (String) cmd;
-
-                        taskList.add(scheduler.runTaskLater(plugin, () ->
-                                        TaskManager.dispatchCommand(cmdStr, targetWorld, usePapi),
-                                totalDelay));
-                    }
+    private void programarPasoComandos(Object comandosStep, long totalDelay, List<PluginTask> taskList, String targetWorld, boolean usePapi, boolean asPlayer, UUID triggerPlayerUuid) {
+        if (comandosStep instanceof String) {
+            String cmd = (String) comandosStep;
+            taskList.add(TickScheduler.runTaskLater(() ->
+                            TaskManager.dispatchCommand(cmd, targetWorld, usePapi, asPlayer, triggerPlayerUuid),
+                    totalDelay));
+        } else if (comandosStep instanceof List) {
+            for (Object cmd : (List<?>) comandosStep) {
+                if (cmd instanceof String) {
+                    String cmdStr = (String) cmd;
+                    taskList.add(TickScheduler.runTaskLater(() ->
+                                    TaskManager.dispatchCommand(cmdStr, targetWorld, usePapi, asPlayer, triggerPlayerUuid),
+                            totalDelay));
                 }
             }
         }
